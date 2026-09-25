@@ -3,9 +3,9 @@ import os
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 
-# Vercel inyecta automáticamente estas variables cuando creas la base de datos KV
-KV_REST_API_URL = os.environ.get('KV_REST_API_URL')
-KV_REST_API_TOKEN = os.environ.get('KV_REST_API_TOKEN')
+# Upstash inyecta automáticamente estas variables
+KV_REST_API_URL = os.environ.get('UPSTASH_REDIS_REST_URL') or os.environ.get('KV_REST_API_URL')
+KV_REST_API_TOKEN = os.environ.get('UPSTASH_REDIS_REST_TOKEN') or os.environ.get('KV_REST_API_TOKEN')
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -44,16 +44,13 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(500, {"status": "error", "message": str(e)})
 
     def _send_json(self, status_code, data_dict):
-        """Utilidad para responder JSON correctamente formateado"""
         self.send_response(status_code)
         self.send_header('Content-type', 'application/json')
-        # Permitir CORS por si en el futuro conectas un dashboard web
         self.send_header('Access-Control-Allow-Origin', '*') 
         self.end_headers()
         self.wfile.write(json.dumps(data_dict).encode('utf-8'))
 
     def _kv_set(self, key, value):
-        """Guarda un dato en Vercel KV vía REST"""
         if not KV_REST_API_URL: return False
         url = f"{KV_REST_API_URL}/set/{key}"
         req = urllib.request.Request(url, data=json.dumps(value).encode('utf-8'), method='POST')
@@ -65,7 +62,6 @@ class handler(BaseHTTPRequestHandler):
             return False
 
     def _kv_get(self, key):
-        """Recupera un dato de Vercel KV vía REST"""
         if not KV_REST_API_URL: return None
         url = f"{KV_REST_API_URL}/get/{key}"
         req = urllib.request.Request(url)
